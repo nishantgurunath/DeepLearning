@@ -3,8 +3,8 @@ Refer to handout for details.
 - Build scripts to train your model
 - Submit your code to Autolab
 """
-import hw2.preprocessing as preprocess
-import hw2.all_cnn as cnn
+import CNN.preprocessing as preprocess
+import CNN.all_cnn as cnn
 import numpy as np
 import torch
 import torch.nn as nn
