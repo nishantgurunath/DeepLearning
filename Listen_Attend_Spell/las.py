@@ -17,7 +17,7 @@ from vocab import VOCAB
 from vocab import VOCAB_MAP
 import matplotlib.pyplot as plt
 
-
+## Dataloader for Test Sample Batching
 class SpeechModelDataLoaderTest(DataLoader):
     """
         TODO: Define data loader logic here
@@ -40,7 +40,7 @@ class SpeechModelDataLoaderTest(DataLoader):
             yield (out_data)
             i = i + 1
  
-
+## Dataloader for Train Sample Batching
 class SpeechModelDataLoader(DataLoader):
     """
         TODO: Define data loader logic here
@@ -51,7 +51,7 @@ class SpeechModelDataLoader(DataLoader):
         self.shuffle = shuffle
 
     def __iter__(self):
-        # concatenate your articles and build into batches
+        # Randomize Batches
         index = np.arange(len(self.dataset[0]))
         if(self.shuffle==True):
             np.random.shuffle(index)
@@ -62,6 +62,7 @@ class SpeechModelDataLoader(DataLoader):
         num_res = len(data)%self.batch_size
         num_utt = num_batches*self.batch_size
 
+        # Iterate over Batches
         i = 0
         while(i<num_batches):
             out_data = []
@@ -70,17 +71,20 @@ class SpeechModelDataLoader(DataLoader):
             total_chars = 0
             s = i*self.batch_size
             e = (i+1)*self.batch_size
+            
+            ## Batch size in decreasing order of lengths
             index1 = np.arange(s,e)
             lengths = [len(data[j]) for j in range(s,e)] 
             l1, l2 = [list(x) for x in zip(*sorted(zip(lengths, index1), key=itemgetter(0), reverse = True))]
 
-
+            ## Speech Data
             if torch.cuda.is_available():
                 out_data.append([torch.cuda.FloatTensor(data[l2[j]]) for j in range(0,e-s)])
              
             else:
                 out_data.append([torch.FloatTensor(data[l2[j]]) for j in range(0,e-s)])
 
+            ## Store lengths for masking
             for j in l2:
                 target_lengths.append(len(labels[j]))
                 out_labels.append(labels[j])
@@ -99,13 +103,8 @@ class SpeechModelDataLoader(DataLoader):
             i = i + 1
             
 
-        ## Residual Data
-        #L = len(data)
-        #if torch.cuda.is_available():
-        #        yield ([torch.cuda.FloatTensor(data[j]) for j in range(L-num_res,L)], [torch.cuda.LongTensor(labels[j]) for j in range(L-num_res,L)])
-        #else:
-        #        yield ([torch.FloatTensor(data[j]) for j in range(L-num_res,L)], [torch.LongTensor(labels[j]) for j in range(L-num_res,L)])
-
+      
+## Listen Model
 class Listener(nn.Module):
 
     def __init__(self):
@@ -138,8 +137,8 @@ class Listener(nn.Module):
         # features: n, t(variable), f
         n = len(features)
         f = len(features[0][0])
+        
         ## PACKING
-        #hidden = (torch.zeros(self.nlayers,n,self.hidden_size).cuda(),torch.zeros(self.nlayers,n,self.hidden_size).cuda())
         features = rnnUtils.pack_sequence(features)
 
         h0, _ = self.rnn_0(features)
@@ -187,6 +186,8 @@ class Listener(nn.Module):
         value = self.val_layer(h3)
         return key, value, mask
 
+    
+# Spell Model    
 class Speller(nn.Module):
 
     def __init__(self):
@@ -499,80 +500,4 @@ def run():
 
 
 ## Model
-
-#listen = Listener(); 
-#spell = Speller();
-#A = torch.FloatTensor(np.ones((20, 100, 40)))
-#B = [torch.FloatTensor([np.random.randn(40),np.random.randn(40),np.random.randn(40)]*10),torch.LongTensor([np.random.randn(40),np.random.randn(40)]*10),torch.LongTensor([np.random.randn(40),np.random.randn(40)]*10)]
-
-
-#key,value,mask = listen(B)
-#print (key.shape)
-#inputs = torch.from_numpy(np.array([[1,2,3,4],[4,5,6,7],[7,8,9,10]]))
-#out = spell(key,value,mask,inputs,training=True)
-#print (out.shape)
-#print(prediction_random_search(listen,spell,B,inputs))
-
 run()
-
-
-
-
-## Transcripts Generation
-
-#data = np.load('./all/train.npy', encoding='bytes')
-#transcripts = np.load('./all/train_int_transcripts.npy')
-#transcripts = np.load('./all/dev_transcripts.npy')
-#print (VOCAB[transcripts[2000][1]])
-#print ((np.unique(list(''.join(transcripts)))))
-#print ((np.unique(np.concatenate(transcripts))))
-#dist =  [len(transcripts[i]) for i in range(len(transcripts))]
-#plt.hist(dist,bins=10)
-#plt.show()
-
-
-
-#
-#print (len(data), len(transcripts))
-#print (len(data[0]), len(transcripts[0]))
-#print (len(data[1]), len(transcripts[1]))
-#print (len(data[2000]), len(transcripts[2000]))
-#print (transcripts[2000])
-#print (transcripts[0])
-
-#transcripts_int = [[] for i in range(len(transcripts))]
-
-#for k in range(len(transcripts)):
-#    transcripts[k] = list(transcripts[k])
-#    for i in range(len(transcripts[k])):
-#        transcripts[k][i] = transcripts[k][i].decode('UTF-8')
-#    transcripts[k] = ' '.join(transcripts[k])
-#    transcripts[k] = "s" + transcripts[k] + "e"
-#    for i in range(len(transcripts[k])):
-#        transcripts_int[k].append(VOCAB[transcripts[k][i]])
-#np.save('./all/train_char_transcripts.npy', transcripts)
-#np.save('./all/train_int_transcripts.npy', transcripts_int)
-#np.save('./all/dev_int_transcripts.npy', transcripts_int)
-#print (transcripts[0][0])
-#print (transcripts_int[0][0])
-#print (transcripts[0][1])
-#print (transcripts_int[0][1])
-#print (len(transcripts_int[2000]))
-
-
-
-## Data Loader
-#dset = (data,transcripts)
-#train_loader = SpeechModelDataLoader(dset,3,shuffle=False)
-
-#i = 0
-#for data,labels,mask,char in train_loader:
-#    print (labels.shape)
-#    print (mask.shape)
-#    print (data)
-#    print (dset[0][0:3])
-#    print (labels)
-#    print (dset[1][0:3])
-#    i = i + 1
-#    if(i==1):
-#        break
